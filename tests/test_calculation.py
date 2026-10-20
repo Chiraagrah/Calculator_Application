@@ -58,6 +58,10 @@ def test_round_trip(calc):
      "timestamp": "2026-01-02T03:04:05"},                  # bad decimal
     {"operation": "add", "operand_a": "2", "operand_b": "3", "result": "5",
      "timestamp": "not-a-date"},                           # bad timestamp
+         {"operation": "add", "operand_a": "NaN", "operand_b": "3", "result": "5",
+     "timestamp": "2026-01-02T03:04:05"},                  # non-finite operand
+    {"operation": "add", "operand_a": "2", "operand_b": "3", "result": "Infinity",
+     "timestamp": "2026-01-02T03:04:05"},                  # non-finite result
 ])
 def test_from_dict_rejects_malformed(bad):
     with pytest.raises(ValidationError, match="Malformed"):

@@ -3,28 +3,19 @@ from typing import Callable, Optional
 
 from app.calculator import Calculator
 from app.calculator_config import CalculatorConfig
-from app.exceptions import CalculatorError, ConfigurationError, ValidationError
+from app.commands import ExitCommand, parse_command
+from app.exceptions import CalculatorError, ConfigurationError
 from app.history import AutoSaveObserver, LoggingObserver
 from app.logger import Logger
-from app.operations import OperationFactory
 
 PROMPT = "calc> "
 
 
-COMMAND_HELP = {
-    "history": "Show calculation history",
-    "clear": "Clear calculation history",
-    "undo": "Undo the last change to history",
-    "redo": "Redo the last undone change",
-    "save": "Save history to the CSV file",
-    "load": "Load history from the CSV file (replaces current history)",
-    "help": "Show this help",
-    "exit": "Exit the calculator",
-}
-
-
 class Repl:
-    """Read-Eval-Print Loop. Input and output are injected so tests can script a session."""
+    """Read-Eval-Print Loop. Acts as the Command invoker: parse, execute, print.
+
+    Input and output are injected so tests can script a whole session.
+    """
 
     def __init__(
         self,
@@ -37,15 +28,6 @@ class Repl:
         self._input = input_fn
         self._print = output_fn
         self._logger = logger or Logger.get()
-        self._commands: dict[str, Callable[[], None]] = {
-            "history": self._cmd_history,
-            "clear": self._cmd_clear,
-            "undo": self._cmd_undo,
-            "redo": self._cmd_redo,
-            "save": self._cmd_save,
-            "load": self._cmd_load,
-            "help": self._cmd_help,
-        }
 
     def run(self) -> None:
         """Loop until the user exits (or input ends)."""
@@ -65,73 +47,19 @@ class Repl:
         parts = line.split()
         if not parts:
             return True
-        command, args = parts[0].lower(), parts[1:]
-        if command == "exit":
-            self._print("Goodbye!")
-            return False
         try:
-            self._dispatch(command, args)
+            command = parse_command(self._calc, line)
+            output = command.execute()
         except CalculatorError as exc:
             self._print(f"Error: {exc}")
+            return True
         except Exception:
             # Last line of defence: a bug must never kill the session.
-            self._logger.exception("Unexpected error while running '%s'", command)
+            self._logger.exception("Unexpected error while running '%s'", parts[0].lower())
             self._print("Unexpected error. Details were written to the log.")
-        return True
-
-    def _dispatch(self, command: str, args: list[str]) -> None:
-        if command in self._commands:
-            if args:
-                raise ValidationError(f"'{command}' takes no arguments")
-            self._commands[command]()
-        elif command in OperationFactory.available_operations():
-            if len(args) != 2:
-                raise ValidationError(f"Usage: {command} <a> <b>")
-            self._cmd_calculate(command, args[0], args[1])
-        else:
-            self._logger.warning("Unknown command: %s", command)
-            raise ValidationError(f"Unknown command '{command}'. Type 'help' to see available commands")
-
-    # ---- commands ----
-    def _cmd_calculate(self, name: str, raw_a: str, raw_b: str) -> None:
-        calculation = self._calc.calculate(name, raw_a, raw_b)
-        self._print(f"Result: {format(calculation.result, 'f')}")
-
-    def _cmd_history(self) -> None:
-        history = self._calc.history
-        if not history:
-            self._print("No history yet.")
-            return
-        for index, calculation in enumerate(history, start=1):
-            self._print(f"{index}. {calculation}")
-
-    def _cmd_clear(self) -> None:
-        self._calc.clear_history()
-        self._print("History cleared.")
-
-    def _cmd_undo(self) -> None:
-        self._calc.undo()
-        self._print(f"Undone. History now has {len(self._calc.history)} entries.")
-
-    def _cmd_redo(self) -> None:
-        self._calc.redo()
-        self._print(f"Redone. History now has {len(self._calc.history)} entries.")
-
-    def _cmd_save(self) -> None:
-        self._calc.save_history()
-        self._print("History saved.")
-
-    def _cmd_load(self) -> None:
-        self._calc.load_history()
-        self._print(f"History loaded ({len(self._calc.history)} entries).")
-
-    def _cmd_help(self) -> None:
-        self._print("Operations (usage: <operation> <a> <b>):")
-        for name, description in OperationFactory.describe_operations().items():
-            self._print(f"  {name.ljust(12)}{description}")
-        self._print("Commands:")
-        for name, description in COMMAND_HELP.items():
-            self._print(f"  {name.ljust(12)}{description}")
+            return True
+        self._print(output)
+        return not isinstance(command, ExitCommand)
 
 
 def main(

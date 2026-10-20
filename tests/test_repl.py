@@ -5,7 +5,7 @@ import pytest
 from app import calculator_config
 from app.calculator import Calculator
 from app.logger import LOGGER_NAME
-from app.operations import Operation, OperationFactory
+from app.operations import Operation, OperationFactory, describe
 from app.repl import COMMAND_HELP, Repl, main
 
 
@@ -242,3 +242,15 @@ def test_main_exits_with_error_when_log_dir_cannot_be_created(env, monkeypatch):
     out = []
     assert main(make_input(["exit"]), out.append) == 1
     assert "Cannot create directory" in out[0]
+
+def test_help_shows_description_of_newly_registered_operation(run):
+    @describe("Return the first number")
+    class First(Operation):
+        def execute(self, a, b):
+            return a
+
+    OperationFactory.register_operation("first", First)
+    try:
+        assert "Return the first number" in run("help")
+    finally:
+        OperationFactory._operations.pop("first")

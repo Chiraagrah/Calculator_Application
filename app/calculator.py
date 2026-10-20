@@ -7,7 +7,7 @@ from app.calculation import Calculation
 from app.calculator_config import CalculatorConfig
 from app.calculator_memento import CalculatorMemento
 from app.exceptions import CalculatorError, OperationError
-from app.history import HistoryObserver
+from app.history import HistoryObserver, HistoryStore
 from app.input_validators import validate_operands
 from app.logger import Logger
 from app.operations import Operation, OperationFactory
@@ -28,6 +28,7 @@ class Calculator:
         self._undo_stack: deque[CalculatorMemento] = deque(maxlen=config.max_history_size)
         self._redo_stack: list[CalculatorMemento] = []
         self._observers: list[HistoryObserver] = []
+        self._store = HistoryStore(config.history_file, config.default_encoding)
 
     # ---- state ----
     @property
@@ -125,3 +126,24 @@ class Calculator:
         self._remember_current_state()
         self._history = ()
         self._logger.info("History cleared")
+
+        # ---- persistence ----
+    def save_history(self) -> None:
+        """Write history to the configured CSV file."""
+        try:
+            self._store.save(self._history)
+        except CalculatorError as exc:
+            self._logger.error("Save failed: %s", exc)
+            raise
+        self._logger.info("History saved to %s (%d entries)", self._store.path, len(self._history))
+
+    def load_history(self) -> None:
+        """Replace history with the CSV contents. Undoable; a failed load changes nothing."""
+        try:
+            loaded = self._store.load()[-self._config.max_history_size:]
+        except CalculatorError as exc:
+            self._logger.error("Load failed: %s", exc)
+            raise
+        self._remember_current_state()  # only after a successful read, so failures never touch undo
+        self._history = loaded
+        self._logger.info("History loaded from %s (%d entries)", self._store.path, len(loaded))

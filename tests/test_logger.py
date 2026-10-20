@@ -1,9 +1,11 @@
 import logging
+from logging.handlers import RotatingFileHandler
 
 import pytest
 
 from app.calculator_config import CalculatorConfig
 from app.logger import LOGGER_NAME, Logger
+from app import logger as logger_module
 
 
 @pytest.fixture
@@ -62,3 +64,23 @@ def test_logger_does_not_propagate_to_console(config):
 
 def test_get_returns_shared_logger(config):
     assert Logger.get() is Logger.setup(config)
+
+
+
+
+def test_setup_uses_a_rotating_handler(config):
+    logger = Logger.setup(config)
+    assert len(logger.handlers) == 1
+    assert isinstance(logger.handlers[0], RotatingFileHandler)
+
+
+def test_log_rotates_and_keeps_only_the_configured_backups(config, monkeypatch):
+    monkeypatch.setattr(logger_module, "MAX_LOG_BYTES", 200)
+    monkeypatch.setattr(logger_module, "LOG_BACKUP_COUNT", 2)
+    Logger.setup(config)
+    for i in range(60):
+        Logger.get().info("entry %d with some padding text to fill the file", i)
+    names = {path.name for path in config.log_file.parent.iterdir()}
+    base = config.log_file.name
+    assert {base, f"{base}.1", f"{base}.2"} <= names
+    assert f"{base}.3" not in names

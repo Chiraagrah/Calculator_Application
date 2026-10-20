@@ -124,7 +124,7 @@ Goodbye!
 
 ## Logging
 
-Each calculation is written to the log file with its operation, operands, and result. Rejected input, undo/redo, save/load, and auto-save failures are logged at WARNING or ERROR as appropriate. Logging is file-only so it never clutters the REPL.
+The log file rotates at about 1 MB and keeps the 3 most recent backups (calculator.log.1 to .3), so it cannot grow without limit
 
 ## Testing
 

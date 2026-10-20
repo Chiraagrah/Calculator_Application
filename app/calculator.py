@@ -33,23 +33,28 @@ class Calculator:
     # ---- state ----
     @property
     def history(self) -> tuple[Calculation, ...]:
+        """Calculation history, oldest first, as an immutable tuple."""
         return self._history
 
     @property
     def can_undo(self) -> bool:
+        """True when there is a change to undo."""
         return bool(self._undo_stack)
 
     @property
     def can_redo(self) -> bool:
+        """True when there is an undone change to redo."""
         return bool(self._redo_stack)
 
     # ---- observers ----
     def register_observer(self, observer: HistoryObserver) -> None:
+        """Subscribe an observer to be notified of each new calculation."""
         if not isinstance(observer, HistoryObserver):
             raise TypeError("Observer must inherit from HistoryObserver")
         self._observers.append(observer)
 
     def remove_observer(self, observer: HistoryObserver) -> None:
+        """Unsubscribe an observer; removing one that is not registered is harmless."""
         if observer in self._observers:
             self._observers.remove(observer)
 
@@ -94,9 +99,11 @@ class Calculator:
 
     # ---- memento ----
     def create_memento(self) -> CalculatorMemento:
+        """Snapshot the current history."""
         return CalculatorMemento(history=self._history)
 
     def restore(self, memento: CalculatorMemento) -> None:
+        """Replace the current history with the snapshot's contents."""
         self._history = memento.history
 
     def _remember_current_state(self) -> None:
@@ -105,6 +112,7 @@ class Calculator:
 
     # ---- undo / redo / clear ----
     def undo(self) -> None:
+        """Revert the last change to history. Raises OperationError if there is nothing to undo."""
         if not self._undo_stack:
             self._logger.warning("Undo requested with nothing to undo")
             raise OperationError("Nothing to undo")
@@ -113,6 +121,7 @@ class Calculator:
         self._logger.info("Undo performed; history size is now %d", len(self._history))
 
     def redo(self) -> None:
+        """Re-apply the last undone change. Raises OperationError if there is nothing to redo."""
         if not self._redo_stack:
             self._logger.warning("Redo requested with nothing to redo")
             raise OperationError("Nothing to redo")
@@ -121,6 +130,7 @@ class Calculator:
         self._logger.info("Redo performed; history size is now %d", len(self._history))
 
     def clear_history(self) -> None:
+        """Clear all history. Undoable; does nothing if history is already empty."""
         if not self._history:
             return
         self._remember_current_state()

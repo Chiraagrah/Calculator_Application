@@ -38,6 +38,7 @@ def command(name: str, description: str):
     """Class decorator: register a Command under a REPL name with its help text."""
 
     def decorator(command_class: type[Command]) -> type[Command]:
+        """Register the class and attach its name and help text."""
         if not (isinstance(command_class, type) and issubclass(command_class, Command)):
             raise TypeError("@command can only decorate Command subclasses")
         command_class.name = name
@@ -63,15 +64,18 @@ class CalculateCommand(Command):
         self._raw_b = raw_b
 
     def execute(self) -> str:
+        """Run the calculation and return the formatted result."""
         calculation = self._calc.calculate(self.name, self._raw_a, self._raw_b)
         return f"Result: {format(calculation.result, 'f')}"
 
 
 @command("history", "Show calculation history")
 class HistoryCommand(Command):
+    """Show the calculation history."""
     style = "plain"
 
     def execute(self) -> str:
+        """Return the numbered history, or a notice if it is empty."""
         history = self._calc.history
         if not history:
             return "No history yet."
@@ -80,35 +84,45 @@ class HistoryCommand(Command):
 
 @command("clear", "Clear calculation history")
 class ClearCommand(Command):
+    """Clear the calculation history."""
     def execute(self) -> str:
+        """Clear history and confirm."""
         self._calc.clear_history()
         return "History cleared."
 
 
 @command("undo", "Undo the last change to history")
 class UndoCommand(Command):
+    """Undo the last change to history."""
     def execute(self) -> str:
+        """Undo the last change and report the new history size."""
         self._calc.undo()
         return f"Undone. History now has {len(self._calc.history)} entries."
 
 
 @command("redo", "Redo the last undone change")
 class RedoCommand(Command):
+    """Redo the last undone change to history."""
     def execute(self) -> str:
+        """Redo the last undone change and report the new history size."""
         self._calc.redo()
         return f"Redone. History now has {len(self._calc.history)} entries."
 
 
 @command("save", "Save history to the CSV file")
 class SaveCommand(Command):
+    """Save history to the configured CSV file."""
     def execute(self) -> str:
+        """Save history and confirm."""
         self._calc.save_history()
         return "History saved."
 
 
 @command("load", "Load history from the CSV file (replaces current history)")
 class LoadCommand(Command):
+    """Replace history with the contents of the CSV file."""
     def execute(self) -> str:
+        """Load history from the CSV file and report how many entries were read."""
         self._calc.load_history()
         return f"History loaded ({len(self._calc.history)} entries)."
 
@@ -119,6 +133,7 @@ class HelpCommand(Command):
     style = "plain"
 
     def execute(self) -> str:
+        """Build the help text from the operation and command registries."""
         lines = ["Operations (usage: <operation> <a> <b>):"]
         for name, description in OperationFactory.describe_operations().items():
             lines.append(f"  {name.ljust(12)}{description}")
@@ -130,8 +145,10 @@ class HelpCommand(Command):
 
 @command("exit", "Exit the calculator")
 class ExitCommand(Command):
+    """End the session."""
     style = "info"
     def execute(self) -> str:
+        """Return the farewell message; the REPL ends the session."""
         return "Goodbye!"
 
 

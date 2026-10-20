@@ -136,7 +136,7 @@ def test_clear_then_undo_restores_history(run):
     output = run("add 1 2", "clear", "history", "undo", "history")
     assert "History cleared." in output
     assert output.count("No history yet.") == 1
-    assert output.rstrip().endswith("1. add(1, 2) = 3")
+    assert "1. add(1, 2) = 3" in output.split("Undone.")[-1]
 
 
 def test_undo_and_redo_report_history_size(run):
@@ -160,7 +160,7 @@ def test_save_then_load_round_trip(run):
     output = run("add 1 2", "save", "clear", "load", "history")
     assert "History saved." in output
     assert "History loaded (1 entries)." in output
-    assert output.rstrip().endswith("1. add(1, 2) = 3")
+    assert "1. add(1, 2) = 3" in output.split("History loaded")[-1]
 
 
 def test_load_missing_file_is_an_error(run):
@@ -169,7 +169,9 @@ def test_load_missing_file_is_an_error(run):
 
 def test_load_is_undoable(run):
     output = run("add 1 2", "save", "add 5 5", "load", "undo", "history")
-    assert output.rstrip().endswith("2. add(5, 5) = 10")
+    tail = output.split("Undone.")[-1]
+    assert "1. add(1, 2) = 3" in tail
+    assert "2. add(5, 5) = 10" in tail
 
 
 # ---- help ----

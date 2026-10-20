@@ -8,7 +8,9 @@ from app.logger import LOGGER_NAME
 from app.operations import Operation, OperationFactory, describe
 from app.commands import registered_commands
 from app.repl import Repl, main
+from colorama import Fore, Style
 
+from app import repl as repl_module
 
 def make_input(lines):
     """Scripted stdin: yields each line, then behaves like end-of-input."""
@@ -260,3 +262,76 @@ def test_exit_rejects_arguments_and_session_continues(run):
     output = run("exit now", "add 1 2")
     assert "'exit' takes no arguments" in output
     assert "Result: 3" in output
+
+# ---- color ----
+@pytest.fixture
+def run_colored(config, app_logger):
+    def _run(*lines, calculator=None):
+        out = []
+        Repl(calculator or Calculator(config), make_input(lines), out.append, use_color=True).run()
+        return out
+    return _run
+
+
+def test_output_has_no_escape_codes_by_default(run):
+    assert "\x1b" not in run("add 1 2", "divide 1 0", "history", "help", "frobnicate")
+
+
+def test_results_and_confirmations_are_green(run_colored):
+    out = run_colored("add 1 2", "clear")
+    assert f"{Fore.GREEN}Result: 3{Style.RESET_ALL}" in out
+    assert f"{Fore.GREEN}History cleared.{Style.RESET_ALL}" in out
+
+
+def test_errors_are_red(run_colored):
+    out = run_colored("divide 1 0", "frobnicate", "add x 1")
+    reds = [line for line in out if line.startswith(Fore.RED)]
+    assert len(reds) == 3
+    assert all(line.endswith(Style.RESET_ALL) for line in reds)
+
+
+def test_welcome_and_goodbye_are_cyan(run_colored):
+    out = run_colored("exit")
+    assert out[0].startswith(Fore.CYAN)
+    assert out[-1] == f"{Fore.CYAN}Goodbye!{Style.RESET_ALL}"
+
+
+def test_end_of_input_goodbye_is_cyan(run_colored):
+    assert run_colored("add 1 2")[-1] == f"{Fore.CYAN}Goodbye!{Style.RESET_ALL}"
+
+
+def test_history_and_help_stay_plain(run_colored):
+    out = run_colored("add 1 2", "history", "help")
+    assert "1. add(1, 2) = 3" in out
+    help_text = out[-3]  # last entries are: help text, blank line, goodbye
+    assert help_text.startswith("Operations (usage:")
+    assert "\x1b" not in help_text
+
+
+def test_unexpected_error_is_red(config, app_logger, run_colored, monkeypatch):
+    calculator = Calculator(config)
+    monkeypatch.setattr(calculator, "calculate", lambda *args: 1 / 0)
+    out = run_colored("add 1 2", calculator=calculator)
+    assert f"{Fore.RED}Unexpected error. Details were written to the log.{Style.RESET_ALL}" in out
+
+
+def test_main_colors_output_on_a_terminal(env, monkeypatch):
+    monkeypatch.setattr(repl_module, "should_use_color", lambda: True)
+    out = []
+    assert main(make_input(["add 1 2", "exit"]), out.append) == 0
+    assert f"{Fore.GREEN}Result: 3{Style.RESET_ALL}" in out
+
+
+def test_main_is_plain_when_not_a_terminal(env, monkeypatch):
+    monkeypatch.setattr(repl_module, "should_use_color", lambda: False)
+    out = []
+    assert main(make_input(["add 1 2", "exit"]), out.append) == 0
+    assert "Result: 3" in out and "\x1b" not in "".join(out)
+
+
+def test_main_colors_configuration_error(env, monkeypatch):
+    monkeypatch.setattr(repl_module, "should_use_color", lambda: True)
+    monkeypatch.setenv("CALCULATOR_PRECISION", "abc")
+    out = []
+    assert main(make_input(["exit"]), out.append) == 1
+    assert out[0].startswith(Fore.RED) and "CALCULATOR_PRECISION" in out[0]

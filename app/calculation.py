@@ -30,12 +30,13 @@ class Calculation:
     def from_dict(cls, data: dict[str, Any]) -> "Calculation":
         """Rebuild from a dict, raising ValidationError on malformed data."""
         try:
+            values = {key: Decimal(str(data[key])) for key in ("operand_a", "operand_b", "result")}
+            if not all(value.is_finite() for value in values.values()):
+                raise ValueError("operands and result must be finite numbers")
             return cls(
                 operation=str(data["operation"]),
-                operand_a=Decimal(str(data["operand_a"])),
-                operand_b=Decimal(str(data["operand_b"])),
-                result=Decimal(str(data["result"])),
                 timestamp=datetime.fromisoformat(str(data["timestamp"])),
+                **values,
             )
         except (KeyError, InvalidOperation, ValueError, TypeError) as exc:
             raise ValidationError(f"Malformed calculation record: {exc!r}") from exc

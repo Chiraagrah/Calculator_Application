@@ -83,3 +83,39 @@ class Percentage(Operation):
 class AbsoluteDifference(Operation):
     def execute(self, a: Decimal, b: Decimal) -> Decimal:
         return abs(a - b)
+
+
+class OperationFactory:
+    """Creates Operation instances from REPL command names (Factory pattern)."""
+
+    _operations: dict[str, type[Operation]] = {
+        "add": Addition,
+        "subtract": Subtraction,
+        "multiply": Multiplication,
+        "divide": Division,
+        "power": Power,
+        "root": Root,
+        "modulus": Modulus,
+        "int_divide": IntegerDivision,
+        "percent": Percentage,
+        "abs_diff": AbsoluteDifference,
+    }
+
+    @classmethod
+    def register_operation(cls, name: str, operation_class: type[Operation]) -> None:
+        """Register a new operation so the factory (and help menu) pick it up."""
+        if not (isinstance(operation_class, type) and issubclass(operation_class, Operation)):
+            raise TypeError("Operation class must inherit from Operation")
+        cls._operations[name.lower()] = operation_class
+
+    @classmethod
+    def create_operation(cls, name: str) -> Operation:
+        """Return an instance for the given command name."""
+        operation_class = cls._operations.get(name.lower())
+        if operation_class is None:
+            raise OperationError(f"Unknown operation: '{name}'")
+        return operation_class()
+
+    @classmethod
+    def available_operations(cls) -> list[str]:
+        return sorted(cls._operations)

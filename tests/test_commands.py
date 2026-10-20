@@ -7,6 +7,7 @@ from app.commands import (CalculateCommand, ClearCommand, Command, ExitCommand, 
                           command, parse_command, registered_commands)
 from app.exceptions import OperationError, ValidationError
 from app.operations import Operation, OperationFactory, describe
+from app.colors import STYLES
 
 
 @pytest.fixture
@@ -190,3 +191,22 @@ def test_help_includes_new_operations_automatically(calc):
         assert run(calc, "first 5 6") == "Result: 5"
     finally:
         OperationFactory._operations.pop("first")
+
+@pytest.mark.parametrize("command_class, style", [
+    (CalculateCommand, "success"),
+    (ClearCommand, "success"),
+    (UndoCommand, "success"),
+    (RedoCommand, "success"),
+    (SaveCommand, "success"),
+    (LoadCommand, "success"),
+    (HistoryCommand, "plain"),
+    (HelpCommand, "plain"),
+    (ExitCommand, "info"),
+])
+def test_command_style_hints(command_class, style):
+    assert command_class.style == style
+
+
+def test_all_command_styles_are_valid_styles():
+    for command_class in [CalculateCommand, *registered_commands().values()]:
+        assert command_class.style in STYLES

@@ -17,6 +17,7 @@ class Command(ABC):
 
     name: str = ""
     description: str = ""
+    style: str = "success"  # presentation hint for the REPL: success, info, warning, error, plain
 
     def __init__(self, calculator: Calculator) -> None:
         self._calc = calculator
@@ -68,6 +69,8 @@ class CalculateCommand(Command):
 
 @command("history", "Show calculation history")
 class HistoryCommand(Command):
+    style = "plain"
+
     def execute(self) -> str:
         history = self._calc.history
         if not history:
@@ -113,6 +116,7 @@ class LoadCommand(Command):
 @command("help", "Show this help")
 class HelpCommand(Command):
     """Builds help from the two registries, so new operations and commands appear automatically."""
+    style = "plain"
 
     def execute(self) -> str:
         lines = ["Operations (usage: <operation> <a> <b>):"]
@@ -126,6 +130,7 @@ class HelpCommand(Command):
 
 @command("exit", "Exit the calculator")
 class ExitCommand(Command):
+    style = "info"
     def execute(self) -> str:
         return "Goodbye!"
 

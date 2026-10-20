@@ -6,6 +6,7 @@ from app.exceptions import OperationError
 
 class Operation(ABC):
     """Base class: every operation takes exactly two numbers."""
+    description: str = "Custom operation"
 
     @abstractmethod
     def execute(self, a: Decimal, b: Decimal) -> Decimal:
@@ -13,29 +14,39 @@ class Operation(ABC):
 
     def __str__(self) -> str:
         return self.__class__.__name__
+    
+def describe(text: str):
+    """Class decorator that attaches help text to an Operation subclass."""
 
+    def decorator(operation_class: type[Operation]) -> type[Operation]:
+        operation_class.description = text
+        return operation_class
 
+    return decorator
+
+@describe("Add two numbers")   
 class Addition(Operation):
     def execute(self, a: Decimal, b: Decimal) -> Decimal:
         return a + b
 
-
+@describe("Subtract the second number from the first")
 class Subtraction(Operation):
     def execute(self, a: Decimal, b: Decimal) -> Decimal:
         return a - b
 
-
+@describe("Multiply two numbers") 
 class Multiplication(Operation):
     def execute(self, a: Decimal, b: Decimal) -> Decimal:
         return a * b
 
-
+@describe("Divide the first number by the second") 
 class Division(Operation):
     def execute(self, a: Decimal, b: Decimal) -> Decimal:
         if b == 0:
             raise OperationError("Division by zero is not allowed")
         return a / b
 
+@describe("Raise the first number to the power of the second")
 class Power(Operation):
     def execute(self, a: Decimal, b: Decimal) -> Decimal:
         if a == 0 and b < 0:
@@ -45,7 +56,7 @@ class Power(Operation):
         except InvalidOperation:
             raise OperationError("Invalid power: negative base with non-integer exponent")
 
-
+@describe("Take the nth root: root <number> <n>")
 class Root(Operation):
     """nth root: a is the number, b is the degree n."""
     def execute(self, a: Decimal, b: Decimal) -> Decimal:
@@ -57,21 +68,21 @@ class Root(Operation):
             return -((-a) ** (Decimal(1) / b))
         return a ** (Decimal(1) / b)
 
-
+@describe("Remainder of dividing the first number by the second")
 class Modulus(Operation):
     def execute(self, a: Decimal, b: Decimal) -> Decimal:
         if b == 0:
             raise OperationError("Modulus by zero is not allowed")
         return a % b
 
-
+@describe("Integer quotient, discarding the fractional part")
 class IntegerDivision(Operation):
     def execute(self, a: Decimal, b: Decimal) -> Decimal:
         if b == 0:
             raise OperationError("Integer division by zero is not allowed")
         return a // b
 
-
+@describe("First number as a percentage of the second")  
 class Percentage(Operation):
     """Percentage(a, b) = (a / b) * 100."""
     def execute(self, a: Decimal, b: Decimal) -> Decimal:
@@ -79,7 +90,7 @@ class Percentage(Operation):
             raise OperationError("Percentage with zero denominator is not allowed")
         return (a / b) * 100
 
-
+@describe("Absolute difference between two numbers") 
 class AbsoluteDifference(Operation):
     def execute(self, a: Decimal, b: Decimal) -> Decimal:
         return abs(a - b)
@@ -119,3 +130,8 @@ class OperationFactory:
     @classmethod
     def available_operations(cls) -> list[str]:
         return sorted(cls._operations)
+
+    @classmethod
+    def describe_operations(cls) -> dict[str, str]:
+        """Map each registered operation name to its help text, sorted by name."""
+        return {name: cls._operations[name].description for name in cls.available_operations()}

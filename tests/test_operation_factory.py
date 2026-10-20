@@ -1,9 +1,19 @@
 import pytest
 
 from app.exceptions import OperationError
-from app.operations import (Operation, OperationFactory, Addition, Subtraction,
-                            Multiplication, Division, Power, Root, Modulus,
-                            IntegerDivision, Percentage, AbsoluteDifference)
+from app.operations import (Operation, 
+                            OperationFactory, 
+                            Addition, 
+                            Subtraction,
+                            Multiplication, 
+                            Division, 
+                            Power, 
+                            Root, 
+                            Modulus,
+                            IntegerDivision, 
+                            Percentage, 
+                            AbsoluteDifference, 
+                            describe)
 
 
 @pytest.mark.parametrize("name, expected_class", [
@@ -52,3 +62,46 @@ def test_register_invalid_class_raises(bad):
 
 def test_available_operations_lists_all_ten():
     assert len(OperationFactory.available_operations()) >= 10
+
+
+def test_describe_attaches_text_and_returns_the_class():
+    @describe("Return the first operand")
+    class First(Operation):
+        def execute(self, a, b):
+            return a
+
+    assert First.description == "Return the first operand"
+    assert First().execute(1, 2) == 1
+
+
+def test_undecorated_operation_has_default_description():
+    class Plain(Operation):
+        def execute(self, a, b):
+            return a
+
+    assert Plain.description == "Custom operation"
+
+
+def test_every_builtin_operation_has_a_unique_description():
+    descriptions = OperationFactory.describe_operations()
+    assert len(descriptions) == 10
+    assert "Custom operation" not in descriptions.values()
+    assert len(set(descriptions.values())) == len(descriptions)
+
+
+def test_describe_operations_is_sorted_by_name():
+    names = list(OperationFactory.describe_operations())
+    assert names == sorted(names)
+
+
+def test_registered_operation_description_is_picked_up():
+    @describe("Return the first operand")
+    class First(Operation):
+        def execute(self, a, b):
+            return a
+
+    OperationFactory.register_operation("first", First)
+    try:
+        assert OperationFactory.describe_operations()["first"] == "Return the first operand"
+    finally:
+        OperationFactory._operations.pop("first")

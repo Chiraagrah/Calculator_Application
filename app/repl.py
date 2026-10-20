@@ -10,18 +10,6 @@ from app.operations import OperationFactory
 
 PROMPT = "calc> "
 
-OPERATION_HELP = {
-    "add": "Add two numbers",
-    "subtract": "Subtract the second number from the first",
-    "multiply": "Multiply two numbers",
-    "divide": "Divide the first number by the second",
-    "power": "Raise the first number to the power of the second",
-    "root": "Take the nth root: root <number> <n>",
-    "modulus": "Remainder of dividing the first number by the second",
-    "int_divide": "Integer quotient, discarding the fractional part",
-    "percent": "First number as a percentage of the second",
-    "abs_diff": "Absolute difference between two numbers",
-}
 
 COMMAND_HELP = {
     "history": "Show calculation history",
@@ -139,8 +127,8 @@ class Repl:
 
     def _cmd_help(self) -> None:
         self._print("Operations (usage: <operation> <a> <b>):")
-        for name in OperationFactory.available_operations():
-            self._print(f"  {name.ljust(12)}{OPERATION_HELP.get(name, 'Custom operation')}")
+        for name, description in OperationFactory.describe_operations().items():
+            self._print(f"  {name.ljust(12)}{description}")
         self._print("Commands:")
         for name, description in COMMAND_HELP.items():
             self._print(f"  {name.ljust(12)}{description}")

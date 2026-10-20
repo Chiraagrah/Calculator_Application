@@ -27,6 +27,7 @@ class LoggingObserver(HistoryObserver):
         self._logger = logger or Logger.get()
 
     def update(self, calculation: Calculation) -> None:
+        """Log the calculation's operation, operands, and result."""
         self._logger.info(
             "Calculation performed: operation=%s, operands=(%s, %s), result=%s",
             calculation.operation,
@@ -37,7 +38,10 @@ class LoggingObserver(HistoryObserver):
 
 
 class SupportsSaveHistory(Protocol):
-    def save_history(self) -> None: ...
+    """Anything that can persist its history; satisfied by Calculator."""
+
+    def save_history(self) -> None:
+        """Persist the current history."""
 
 
 class AutoSaveObserver(HistoryObserver):
@@ -50,6 +54,7 @@ class AutoSaveObserver(HistoryObserver):
         self._logger = logger or Logger.get()
 
     def update(self, calculation: Calculation) -> None:
+        """Save history when auto-save is enabled; failures are logged, not raised."""
         if not self._enabled:
             return
         try:
@@ -72,6 +77,7 @@ class HistoryStore:
 
     @property
     def path(self) -> Path:
+        """Location of the CSV file."""
         return self._path
 
     def save(self, calculations: Iterable[Calculation]) -> None:

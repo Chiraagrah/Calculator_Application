@@ -6,7 +6,8 @@ from app import calculator_config
 from app.calculator import Calculator
 from app.logger import LOGGER_NAME
 from app.operations import Operation, OperationFactory, describe
-from app.repl import COMMAND_HELP, Repl, main
+from app.commands import registered_commands
+from app.repl import Repl, main
 
 
 def make_input(lines):
@@ -179,7 +180,7 @@ def test_help_lists_every_operation_and_command(run):
     output = run("help")
     for name in OperationFactory.available_operations():
         assert name in output
-    for name in COMMAND_HELP:
+    for name in registered_commands():
         assert name in output
 
 
@@ -254,3 +255,8 @@ def test_help_shows_description_of_newly_registered_operation(run):
         assert "Return the first number" in run("help")
     finally:
         OperationFactory._operations.pop("first")
+
+def test_exit_rejects_arguments_and_session_continues(run):
+    output = run("exit now", "add 1 2")
+    assert "'exit' takes no arguments" in output
+    assert "Result: 3" in output
